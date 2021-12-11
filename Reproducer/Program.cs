@@ -22,6 +22,17 @@ collection.AddSingleton<IAggregateStore, AggregateStore>();
 
 var services = collection.BuildServiceProvider();
 
+// Proof that the underlying EventStoreClient does not show the same issue
+var connection = services.GetRequiredService<EventStoreClient>();
+var dummyEvent = new List<EventData>{new EventData(Uuid.NewUuid(), "DummyEvent", System.Text.Encoding.UTF8.GetBytes("{}").AsMemory())};
+var dummyStreamName = "DummyStream-" + Guid.NewGuid().ToString();
+await connection.AppendToStreamAsync(dummyStreamName, StreamRevision.None, dummyEvent);
+for(int i = 0; i < 100; i++) {
+    var readResult = connection.ReadStreamAsync(Direction.Forwards, dummyStreamName, StreamPosition.Start);
+    var events = await readResult.ToListAsync();
+    Console.WriteLine($"EventStoreClient Iteration {i} read {events.Count} events from stream {dummyStreamName}");
+}
+
 // Get an aggregate store
 var store = services.GetRequiredService<IAggregateStore>();
 
@@ -41,5 +52,5 @@ await store.Store(booking, CancellationToken.None);
 // typically fails after less than 20 iterations
 for(int i = 0; i < 100; i++) {
     var replayedBooking = await store.Load<Booking>(bookingId, CancellationToken.None);
-    Console.WriteLine($"Iteration: {i}. replayedBooking.State.Id={replayedBooking.State.Id}");
+    Console.WriteLine($"AggregateStore Iteration: {i}. replayedBooking.State.Id={replayedBooking.State.Id}");
 }
