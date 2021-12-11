@@ -1,38 +1,140 @@
-# Eventuous
+# Reproducer Fork of Eventuous
 
-Event Sourcing library for .NET, which is:
-- Somewhat volatile as breaking changes keep coming in
-- Very opinionated
-- [EventStoreDB](https://eventstore.com)-oriented
-- .NET-friendly (decent DI, logging, and diagnostics support)
+This repository is just a fork of [Eventuous](https://github.com/Eventuous/eventuous) to provide a simple reproducer for a issue i found.
 
-## Documentation
 
-Documentation is available on [eventuous.dev](https://eventuous.dev).
+## How to run
 
-It might be not up to date as we are currently solidifying the codebase. 
-This work leads to many breaking changes, and the documentation will get updated when the codebase stabilises.
+1) Start EventStoreDB with `docker-compose up -d esdb` from the repository root
+2) Run `dotnet run` in the `Reproducer` folder
+3) After some iterations you should get an exception
 
-## Packages
+## Bug
 
-Stable versions and release candidates are available on [NuGet](https://www.nuget.org/profiles/Eventuous).
+It looks like that repeating calls to the built in `AggregateStore` trigger a problem with the gRPC based connection to EventStoreDB. This is reproduce by `./Reproducer/Program.cs` with a simple for-loop which just loads the same aggregate over and over again.
 
-In addition, latest dev versions are available on MyGet under the public feed `https://www.myget.org/F/eventuous/api/v3/index.json`.
+So far i have seen two exceptins bubbling up:
+```
+Unhandled exception. Eventuous.ReadFromStreamException: Unable to read events from Booking-20ddda03-ff1e-4474-9899-a80b9658545e: Status(StatusCode="Internal", Detail="Error starting gRPC call. InvalidOperationException: Multiple grpc-status headers.", DebugException="System.InvalidOperationException: Multiple grpc-status headers.
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.GetHeaderValue(HttpHeaders headers, String name)
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.TryGetStatusCore(HttpResponseHeaders headers, Nullable`1& status)
+   at Grpc.Net.Client.Internal.GrpcCall`2.ValidateHeaders(HttpResponseMessage httpResponse)
+   at Grpc.Net.Client.Internal.GrpcCall`2.RunCall(HttpRequestMessage request, Nullable`1 timeout)")
+ ---> System.InvalidOperationException: Status(StatusCode="Internal", Detail="Error starting gRPC call. InvalidOperationException: Multiple grpc-status headers.", DebugException="System.InvalidOperationException: Multiple grpc-status headers.
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.GetHeaderValue(HttpHeaders headers, String name)
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.TryGetStatusCore(HttpResponseHeaders headers, Nullable`1& status)
+   at Grpc.Net.Client.Internal.GrpcCall`2.ValidateHeaders(HttpResponseMessage httpResponse)
+   at Grpc.Net.Client.Internal.GrpcCall`2.RunCall(HttpRequestMessage request, Nullable`1 timeout)")
+ ---> Grpc.Core.RpcException: Status(StatusCode="Internal", Detail="Error starting gRPC call. InvalidOperationException: Multiple grpc-status headers.", DebugException="System.InvalidOperationException: Multiple grpc-status headers.
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.GetHeaderValue(HttpHeaders headers, String name)
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.TryGetStatusCore(HttpResponseHeaders headers, Nullable`1& status)
+   at Grpc.Net.Client.Internal.GrpcCall`2.ValidateHeaders(HttpResponseMessage httpResponse)
+   at Grpc.Net.Client.Internal.GrpcCall`2.RunCall(HttpRequestMessage request, Nullable`1 timeout)")
+   at Grpc.Net.Client.Internal.HttpContentClientStreamReader`2.MoveNextCore(CancellationToken cancellationToken)
+   at EventStore.Client.Interceptors.TypedExceptionInterceptor.AsyncStreamReader`1.MoveNext(CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at EventStore.Client.Interceptors.TypedExceptionInterceptor.AsyncStreamReader`1.MoveNext(CancellationToken cancellationToken)
+   at Grpc.Core.AsyncStreamReaderExtensions.ReadAllAsyncCore[T](IAsyncStreamReader`1 streamReader, CancellationToken cancellationToken)+MoveNext()
+   at Grpc.Core.AsyncStreamReaderExtensions.ReadAllAsyncCore[T](IAsyncStreamReader`1 streamReader, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+   at EventStore.Client.EventStoreClient.ReadStreamResult.<>c__DisplayClass4_0.<<-ctor>g__GetStateInternal|1>d.MoveNext()
+--- End of stack trace from previous location ---
+   at EventStore.Client.EventStoreClient.ReadStreamResult.MoveNextAsync()
+   at Eventuous.EventStore.EsdbEventStore.<>c__DisplayClass10_0.<<ReadStream>b__0>d.MoveNext() in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 193
+--- End of stack trace from previous location ---
+   at Eventuous.EventStore.EsdbEventStore.<>c__DisplayClass10_0.<<ReadStream>b__0>d.MoveNext() in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 193
+--- End of stack trace from previous location ---
+   at Eventuous.EventStore.EsdbEventStore.TryExecute[T](Func`1 func, String stream, Func`1 getError, Func`3 getException) in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 271
+   --- End of inner exception stack trace ---
+   at Eventuous.EventStore.EsdbEventStore.TryExecute[T](Func`1 func, String stream, Func`1 getError, Func`3 getException) in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 281
+   at Eventuous.EventStore.EsdbEventStore.ReadStream(StreamName stream, StreamReadPosition start, Int32 count, Action`1 callback, CancellationToken cancellationToken) in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 189
+   at Eventuous.AggregateStore.Load[T](String id, CancellationToken cancellationToken) in /home/epplersv/projects/eventuous/src/Core/src/Eventuous/Store/AggregateStore.cs:line 75
+   at Program.<Main>$(String[] args) in /home/epplersv/projects/eventuous/Reproducer/Program.cs:line 42
+   at Program.<Main>(String[] args)
+   ```
 
-## Support
+   and
 
-If you like Eventuous and want to show your appreciation to its contributors, please [:heart: sponsor us](https://github.com/sponsors/alexeyzimarev).
-
-For development and production support, get in touch with [Ubiquitous](https://ubiquitous.no).
-
-## Other things
-
-Authors: 
-- [Alexey Zimarev](https://zimarev.com)
-- MongoDB tools - [Sergio Silveira](https://twitter.com/RagingKore)
-
-Licence: MIT
-
-Use it on your own risk.
-
-[Docs (incomplete)](https://eventuous.dev)
+   ```
+   Unhandled exception. Eventuous.ReadFromStreamException: Unable to read events from Booking-911603ac-cb10-4a63-ab2b-feb14e5578cf: Status(StatusCode="Internal", Detail="Error starting gRPC call. NullReferenceException: Object reference not set to an instance of an object.", DebugException="System.NullReferenceException: Object reference not set to an instance of an object.
+   at System.Net.Http.Headers.HttpHeaders.ReadStoreValues[T](Span`1 values, Object storeValue, HttpHeaderParser parser, Int32& currentIndex)
+   at System.Net.Http.Headers.HttpHeaders.GetStoreValuesAsStringOrStringArray(HeaderDescriptor descriptor, Object sourceValues, String& singleValue, String[]& multiValue)
+   at System.Net.Http.Headers.HttpHeaders.GetStoreValuesAsStringArray(HeaderDescriptor descriptor, HeaderStoreItemInfo info)
+   at System.Net.Http.Headers.HttpHeaders.GetEnumeratorCore()+MoveNext()
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.BuildMetadata(HttpResponseHeaders responseHeaders)
+   at Grpc.Net.Client.Internal.GrpcCall`2.ValidateHeaders(HttpResponseMessage httpResponse)
+   at Grpc.Net.Client.Internal.GrpcCall`2.RunCall(HttpRequestMessage request, Nullable`1 timeout)")
+ ---> System.InvalidOperationException: Status(StatusCode="Internal", Detail="Error starting gRPC call. NullReferenceException: Object reference not set to an instance of an object.", DebugException="System.NullReferenceException: Object reference not set to an instance of an object.
+   at System.Net.Http.Headers.HttpHeaders.ReadStoreValues[T](Span`1 values, Object storeValue, HttpHeaderParser parser, Int32& currentIndex)
+   at System.Net.Http.Headers.HttpHeaders.GetStoreValuesAsStringOrStringArray(HeaderDescriptor descriptor, Object sourceValues, String& singleValue, String[]& multiValue)
+   at System.Net.Http.Headers.HttpHeaders.GetStoreValuesAsStringArray(HeaderDescriptor descriptor, HeaderStoreItemInfo info)
+   at System.Net.Http.Headers.HttpHeaders.GetEnumeratorCore()+MoveNext()
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.BuildMetadata(HttpResponseHeaders responseHeaders)
+   at Grpc.Net.Client.Internal.GrpcCall`2.ValidateHeaders(HttpResponseMessage httpResponse)
+   at Grpc.Net.Client.Internal.GrpcCall`2.RunCall(HttpRequestMessage request, Nullable`1 timeout)")
+ ---> Grpc.Core.RpcException: Status(StatusCode="Internal", Detail="Error starting gRPC call. NullReferenceException: Object reference not set to an instance of an object.", DebugException="System.NullReferenceException: Object reference not set to an instance of an object.
+   at System.Net.Http.Headers.HttpHeaders.ReadStoreValues[T](Span`1 values, Object storeValue, HttpHeaderParser parser, Int32& currentIndex)
+   at System.Net.Http.Headers.HttpHeaders.GetStoreValuesAsStringOrStringArray(HeaderDescriptor descriptor, Object sourceValues, String& singleValue, String[]& multiValue)
+   at System.Net.Http.Headers.HttpHeaders.GetStoreValuesAsStringArray(HeaderDescriptor descriptor, HeaderStoreItemInfo info)
+   at System.Net.Http.Headers.HttpHeaders.GetEnumeratorCore()+MoveNext()
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.BuildMetadata(HttpResponseHeaders responseHeaders)
+   at Grpc.Net.Client.Internal.GrpcCall`2.ValidateHeaders(HttpResponseMessage httpResponse)
+   at Grpc.Net.Client.Internal.GrpcCall`2.RunCall(HttpRequestMessage request, Nullable`1 timeout)")
+   at Grpc.Net.Client.Internal.HttpContentClientStreamReader`2.MoveNextCore(CancellationToken cancellationToken)
+   at EventStore.Client.Interceptors.TypedExceptionInterceptor.AsyncStreamReader`1.MoveNext(CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at EventStore.Client.Interceptors.TypedExceptionInterceptor.AsyncStreamReader`1.MoveNext(CancellationToken cancellationToken)
+   at Grpc.Core.AsyncStreamReaderExtensions.ReadAllAsyncCore[T](IAsyncStreamReader`1 streamReader, CancellationToken cancellationToken)+MoveNext()
+   at Grpc.Core.AsyncStreamReaderExtensions.ReadAllAsyncCore[T](IAsyncStreamReader`1 streamReader, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+   at EventStore.Client.EventStoreClient.ReadStreamResult.<>c__DisplayClass4_0.<<-ctor>g__GetStateInternal|1>d.MoveNext()
+--- End of stack trace from previous location ---
+   at EventStore.Client.EventStoreClient.ReadStreamResult.MoveNextAsync()
+   at Eventuous.EventStore.EsdbEventStore.<>c__DisplayClass10_0.<<ReadStream>b__0>d.MoveNext() in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 193
+--- End of stack trace from previous location ---
+   at Eventuous.EventStore.EsdbEventStore.<>c__DisplayClass10_0.<<ReadStream>b__0>d.MoveNext() in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 193
+--- End of stack trace from previous location ---
+   at Eventuous.EventStore.EsdbEventStore.TryExecute[T](Func`1 func, String stream, Func`1 getError, Func`3 getException) in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 271
+   --- End of inner exception stack trace ---
+   at Eventuous.EventStore.EsdbEventStore.TryExecute[T](Func`1 func, String stream, Func`1 getError, Func`3 getException) in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 281
+   at Eventuous.EventStore.EsdbEventStore.ReadStream(StreamName stream, StreamReadPosition start, Int32 count, Action`1 callback, CancellationToken cancellationToken) in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 189
+   at Eventuous.AggregateStore.Load[T](String id, CancellationToken cancellationToken) in /home/epplersv/projects/eventuous/src/Core/src/Eventuous/Store/AggregateStore.cs:line 75
+   at Program.<Main>$(String[] args) in /home/epplersv/projects/eventuous/Reproducer/Program.cs:line 43
+   at Program.<Main>(String[] args)
+[epplersv:~/projects/eventuous/Reproducer] reproducer/grpc-errors-when-reading-aggregates-multiple-times(+52/-38,1) 9s 134 ± dotnet run
+Iteration: 0. replayedBooking.State.Id=BookingId { Value = 2209cae1-fb18-4aa3-a723-dfd0d4fe4826 }
+Iteration: 1. replayedBooking.State.Id=BookingId { Value = 2209cae1-fb18-4aa3-a723-dfd0d4fe4826 }
+Unhandled exception. Eventuous.ReadFromStreamException: Unable to read events from Booking-2209cae1-fb18-4aa3-a723-dfd0d4fe4826: Status(StatusCode="Internal", Detail="Error starting gRPC call. InvalidOperationException: Multiple grpc-status headers.", DebugException="System.InvalidOperationException: Multiple grpc-status headers.
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.GetHeaderValue(HttpHeaders headers, String name)
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.TryGetStatusCore(HttpResponseHeaders headers, Nullable`1& status)
+   at Grpc.Net.Client.Internal.GrpcCall`2.ValidateHeaders(HttpResponseMessage httpResponse)
+   at Grpc.Net.Client.Internal.GrpcCall`2.RunCall(HttpRequestMessage request, Nullable`1 timeout)")
+ ---> System.InvalidOperationException: Status(StatusCode="Internal", Detail="Error starting gRPC call. InvalidOperationException: Multiple grpc-status headers.", DebugException="System.InvalidOperationException: Multiple grpc-status headers.
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.GetHeaderValue(HttpHeaders headers, String name)
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.TryGetStatusCore(HttpResponseHeaders headers, Nullable`1& status)
+   at Grpc.Net.Client.Internal.GrpcCall`2.ValidateHeaders(HttpResponseMessage httpResponse)
+   at Grpc.Net.Client.Internal.GrpcCall`2.RunCall(HttpRequestMessage request, Nullable`1 timeout)")
+ ---> Grpc.Core.RpcException: Status(StatusCode="Internal", Detail="Error starting gRPC call. InvalidOperationException: Multiple grpc-status headers.", DebugException="System.InvalidOperationException: Multiple grpc-status headers.
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.GetHeaderValue(HttpHeaders headers, String name)
+   at Grpc.Net.Client.Internal.GrpcProtocolHelpers.TryGetStatusCore(HttpResponseHeaders headers, Nullable`1& status)
+   at Grpc.Net.Client.Internal.GrpcCall`2.ValidateHeaders(HttpResponseMessage httpResponse)
+   at Grpc.Net.Client.Internal.GrpcCall`2.RunCall(HttpRequestMessage request, Nullable`1 timeout)")
+   at Grpc.Net.Client.Internal.HttpContentClientStreamReader`2.MoveNextCore(CancellationToken cancellationToken)
+   at EventStore.Client.Interceptors.TypedExceptionInterceptor.AsyncStreamReader`1.MoveNext(CancellationToken cancellationToken)
+   --- End of inner exception stack trace ---
+   at EventStore.Client.Interceptors.TypedExceptionInterceptor.AsyncStreamReader`1.MoveNext(CancellationToken cancellationToken)
+   at Grpc.Core.AsyncStreamReaderExtensions.ReadAllAsyncCore[T](IAsyncStreamReader`1 streamReader, CancellationToken cancellationToken)+MoveNext()
+   at Grpc.Core.AsyncStreamReaderExtensions.ReadAllAsyncCore[T](IAsyncStreamReader`1 streamReader, CancellationToken cancellationToken)+System.Threading.Tasks.Sources.IValueTaskSource<System.Boolean>.GetResult()
+   at EventStore.Client.EventStoreClient.ReadStreamResult.<>c__DisplayClass4_0.<<-ctor>g__GetStateInternal|1>d.MoveNext()
+--- End of stack trace from previous location ---
+   at EventStore.Client.EventStoreClient.ReadStreamResult.MoveNextAsync()
+   at Eventuous.EventStore.EsdbEventStore.<>c__DisplayClass10_0.<<ReadStream>b__0>d.MoveNext() in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 193
+--- End of stack trace from previous location ---
+   at Eventuous.EventStore.EsdbEventStore.<>c__DisplayClass10_0.<<ReadStream>b__0>d.MoveNext() in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 193
+--- End of stack trace from previous location ---
+   at Eventuous.EventStore.EsdbEventStore.TryExecute[T](Func`1 func, String stream, Func`1 getError, Func`3 getException) in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 271
+   --- End of inner exception stack trace ---
+   at Eventuous.EventStore.EsdbEventStore.TryExecute[T](Func`1 func, String stream, Func`1 getError, Func`3 getException) in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 281
+   at Eventuous.EventStore.EsdbEventStore.ReadStream(StreamName stream, StreamReadPosition start, Int32 count, Action`1 callback, CancellationToken cancellationToken) in /home/epplersv/projects/eventuous/src/EventStore/src/Eventuous.EventStore/EsdbEventStore.cs:line 189
+   at Eventuous.AggregateStore.Load[T](String id, CancellationToken cancellationToken) in /home/epplersv/projects/eventuous/src/Core/src/Eventuous/Store/AggregateStore.cs:line 75
+   at Program.<Main>$(String[] args) in /home/epplersv/projects/eventuous/Reproducer/Program.cs:line 43
+   at Program.<Main>(String[] args)
+   ```
