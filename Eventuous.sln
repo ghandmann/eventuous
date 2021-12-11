@@ -1,5 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# 
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eventuous", "src\Core\src\Eventuous\Eventuous.csproj", "{7494C655-CC42-447C-A2D3-97408F17CCC1}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eventuous.Projections.MongoDB", "src\Mongo\src\Eventuous.Projections.MongoDB\Eventuous.Projections.MongoDB.csproj", "{0649460A-DE39-4AD4-996A-7104E28C68FB}"
@@ -101,6 +102,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eventuous.AspNetCore", "src\Extensions\src\Eventuous.AspNetCore\Eventuous.AspNetCore.csproj", "{C542AD32-4160-407B-B4CE-3B7CE6E8B159}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Eventuous.AspNetCore.Web", "src\Extensions\src\Eventuous.AspNetCore.Web\Eventuous.AspNetCore.Web.csproj", "{E387CC89-42B6-40BD-800B-C369AE971FCC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Reproducer", "Reproducer\Reproducer.csproj", "{4D17F08F-174F-4A55-B803-C3A7D71BD305}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -228,6 +231,10 @@ Global
 		{E387CC89-42B6-40BD-800B-C369AE971FCC}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{E387CC89-42B6-40BD-800B-C369AE971FCC}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{E387CC89-42B6-40BD-800B-C369AE971FCC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{4D17F08F-174F-4A55-B803-C3A7D71BD305}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4D17F08F-174F-4A55-B803-C3A7D71BD305}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4D17F08F-174F-4A55-B803-C3A7D71BD305}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4D17F08F-174F-4A55-B803-C3A7D71BD305}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{151A0839-2B1F-49D6-B5DD-199A5FAAB610} = {C60C6094-2A03-45B6-AB33-C514C35DF823}
